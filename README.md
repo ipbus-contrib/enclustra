@@ -23,8 +23,8 @@ These instructions assume that you have your Xilinx Vivado licensing already set
 
 	mkdir work
 	cd work
-	curl -L https://github.com/ipbus/ipbb/archive/dev/2020g.tar.gz | tar xvz
-	source ipbb-dev-2020g/env.sh 
+	curl -L https://github.com/ipbus/ipbb/archive/dev/2021h.tar.gz | tar xvz
+	source ipbb-dev-2021h/env.sh 
 	ipbb init build
 	cd build
 
