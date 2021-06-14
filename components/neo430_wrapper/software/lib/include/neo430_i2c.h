@@ -38,8 +38,13 @@ void print_GPO( uint16_t gpo);
 // #define DEBUG 1
 #define DELAYVAL 512
 
+#ifndef MAX_CMD_LENGTH
 #define MAX_CMD_LENGTH 16
-#define MAX_N    16
+#endif
+
+#ifndef MAX_N
+#define MAX_N 16
+#endif
 
 #define ENABLECORE 0x1 << 7
 #define STARTCMD 0x1 << 7
@@ -98,7 +103,7 @@ void print_GPO( uint16_t gpo);
 #endif
 
 
-uint8_t buffer[MAX_N];
-char command[MAX_CMD_LENGTH];
+extern uint8_t buffer[MAX_N];
+extern char command[MAX_CMD_LENGTH];
 
 #endif
