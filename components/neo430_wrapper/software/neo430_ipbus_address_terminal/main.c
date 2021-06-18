@@ -32,6 +32,7 @@
 // Libraries
 #include <stdint.h>
 #include <string.h>
+#include "neo430_cmd_buffer.h"
 #include "neo430.h"
 #include "neo430_i2c.h"
 #include "neo430_wishbone_mac_ip.h"
