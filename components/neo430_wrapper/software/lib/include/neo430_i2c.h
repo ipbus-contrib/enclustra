@@ -21,12 +21,14 @@ uint32_t hex_str_to_uint32(char *buffer);
 uint16_t hex_str_to_uint16(char *buffer);
 void delay(uint32_t n );
 bool enable_i2c_bridge();
-int64_t read_E24AA025E48T();
+bool wake_ax3_ATSHA204A (); 
+int64_t read_UID();
 uint16_t zero_buffer( uint8_t buffer[] , uint16_t elements);
 int16_t write_Prom();
 uint32_t read_Prom();
 int16_t write_PromGPO();
 uint16_t read_PromGPO();
+void dump_Prom();
 
 int16_t  read_i2c_prom( uint8_t startAddress , uint8_t wordsToRead , uint8_t buffer[] );
 int16_t write_i2c_prom( uint8_t startAddress , uint8_t wordsToWrite, uint8_t buffer[] );

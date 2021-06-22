@@ -70,7 +70,7 @@ void setup_i2c(void) {
   neo430_uart_br_print("Setting up I2C core\n");
 
   eepromAddress =  neo430_gpio_port_get() & 0xFF ;
-  neo430_uart_br_print("I2C address E24AA025E EEPROM = ");
+  neo430_uart_br_print("I2C address of EEPROM (hex) = ");
   neo430_uart_print_hex_byte( eepromAddress );
   neo430_uart_br_print("\n");
    
@@ -104,7 +104,7 @@ void setup_i2c(void) {
 
 
 /* ------------------------------------------------------------
- * INFO Read data from Wishbone address
+ * INFO Read data from I2C
  * ------------------------------------------------------------ */
 int16_t read_i2c_address(uint8_t addr , uint8_t n , uint8_t data[]) {
 
@@ -160,6 +160,9 @@ int16_t read_i2c_address(uint8_t addr , uint8_t n , uint8_t data[]) {
 
 }
 
+/* ------------------------------------------------------------
+ * INFO Write data to I2C 
+ * ------------------------------------------------------------ */
 int16_t write_i2c_address(uint8_t addr , uint8_t nToWrite , uint8_t data[], bool stop) {
 
 
@@ -215,6 +218,37 @@ int16_t write_i2c_address(uint8_t addr , uint8_t nToWrite , uint8_t data[], bool
     return nwritten;
 }
 
+
+/* ------------------------------------------------------------
+ * INFO Wake up ATSHA204A crypto EEPROM on AX3
+ * ------------------------------------------------------------ */
+bool wake_ax3_ATSHA204A (){
+
+  // See Section 6.1.1 of https://ww1.microchip.com/downloads/en/DeviceDoc/ATSHA204A-Data-Sheet-40002025A.pdf
+  // first write a string of zeros to SDA
+  // 
+   // Set transmit register (write operation, LSB=0)
+  neo430_wishbone32_write8(ADDR_DATA , 0x00 );
+  //  Set Command Register to 0x90 (write, start)
+  neo430_wishbone32_write8(ADDR_CMD_STAT, STARTCMD | WRITECMD | STOPCMD );
+
+  // now try to regain synchronization
+  // See section 6.5
+  // 
+  neo430_wishbone32_write8(ADDR_DATA , 0xFF );
+  //  Set Command Register to 0x90 (write, start)
+  neo430_wishbone32_write8(ADDR_CMD_STAT, STARTCMD | WRITECMD );
+  // send an additional start command followed by a stop command
+  neo430_wishbone32_write8(ADDR_CMD_STAT, STARTCMD | STOPCMD );
+
+  return true; // TODO - return a status
+
+}
+
+
+/* ------------------------------------------------------------
+ * INFO Enable I2C bridge on Enclustra PM3 
+ * ------------------------------------------------------------ */
 bool enable_i2c_bridge() {
 
   bool mystop;
@@ -326,7 +360,7 @@ void print_IP_address( uint32_t ipAddr){
  *  Print 64 bit number as MAC address  *
  * -------------------------------------*/
 void print_MAC_address( uint64_t uid){
-  neo430_uart_br_print("\nUID from E24AA025E48T = ");
+  neo430_uart_br_print("\nUID from PROM  = ");
   neo430_uart_print_hex_qword(uid);
   //neo430_uart_print_hex_dword((uid>>32) & 0xFFFFFFFF );
   //neo430_uart_print_hex_dword(uid & 0xFFFFFFFF );
@@ -346,12 +380,17 @@ void print_GPO( uint16_t gpo){
 /* ---------------------------*
  *  Read UID from E24AA025E   *
  * ---------------------------*/
-int64_t read_E24AA025E48T(){
+int64_t read_UID(){
 
-  uint8_t wordsToRead = 6;
+  const uint8_t wordsToRead = 6;
   //  int16_t status;
   uint64_t uid = 0;
 
+  neo430_uart_br_print("MAC location in I2C PROM = ");
+  neo430_uart_print_hex_byte( PROMUIDADDR );
+  neo430_uart_br_print("\n");
+
+  
   //status =  read_i2c_prom( startAddress , wordsToRead, buffer );
   read_i2c_prom( PROMUIDADDR , wordsToRead, buffer );
 
@@ -366,7 +405,7 @@ int64_t read_E24AA025E48T(){
  * ---------------------------*/
 uint32_t read_Prom() {
 
-  uint8_t wordsToRead = 4;
+  const uint8_t wordsToRead = 4;
   //  int16_t status;
   uint32_t uid ;
 
@@ -422,7 +461,9 @@ uint16_t read_PromGPO() {
 
 }
 
-
+/* ---------------------------*
+ *  Dump Contents of PROM     *
+ * ---------------------------*/
 int16_t write_PromGPO(){
 
   uint8_t wordsToWrite = 2;
@@ -445,6 +486,28 @@ int16_t write_PromGPO(){
 
   return status;
 
+}
+
+void dump_Prom(){
+
+  uint8_t memAddress;
+  const uint8_t wordsToRead = 1;
+  uint8_t byteRead;
+
+  // Attempt to wake Crypto PROM
+  wake_ax3_ATSHA204A();
+  
+  neo430_uart_br_print("Contents of PROM = ");
+  
+  for(memAddress =0; memAddress<128; memAddress++) {
+    read_i2c_prom( memAddress , wordsToRead, buffer );
+    byteRead = buffer[0];
+
+    neo430_uart_print_hex_byte( memAddress );
+    neo430_uart_br_print(" ");
+    neo430_uart_print_hex_byte( byteRead );
+    neo430_uart_br_print("\n");
+  }
 }
 
 /* ------------------------------------------------------------

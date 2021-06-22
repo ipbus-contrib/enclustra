@@ -163,8 +163,8 @@ $(APP_BIN): image.dat $(IMAGE_GEN)
 $(APPLICATION_IMAGE_FNAME): image.dat $(IMAGE_GEN)
 	@$(IMAGE_GEN) -app_img $< $@
 	@echo Installing application image to $(NEO430_RTL_PATH)/$(APPLICATION_IMAGE_FNAME)
-	@cp $(APPLICATION_IMAGE_FNAME) $(NEO430_RTL_PATH)/.
-	@rm -f $(APPLICATION_IMAGE_FNAME)
+	cp $(APPLICATION_IMAGE_FNAME) $(NEO430_RTL_PATH)/.
+	# @rm -f $(APPLICATION_IMAGE_FNAME)
 
 
 #-------------------------------------------------------------------------------

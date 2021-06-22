@@ -38,6 +38,8 @@ use work.ipbus.all;
 entity enclustra_ax3_pm3_macprom_infra is
 	generic (
           CLK_AUX_FREQ : real := 40.0 ; -- Default: 40 MHz clock - LHC
+          USE_NEO430 : boolean := True; -- Set to "true" in order to include NEO430
+          NEO430_CLOCK_SPEED : natural := 31250000 ; -- soft core clock speed
           FORCE_RARP : boolean := False; -- Set True in order to force use of RARP, regardless of PROM
           UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
 		);
@@ -59,12 +61,14 @@ entity enclustra_ax3_pm3_macprom_infra is
 		rgmii_rx_ctl: in std_logic;
 		rgmii_rxc: in std_logic;
 		uart_txd_o : out std_logic; -- UART connection between soft core and serial terminal
-		uart_rxd_i : in std_logic;
+		uart_rxd_i : in std_logic :='0' ; --* Tie
 		uid_scl_o: out std_logic; -- I2C bus connected to EEPROM storing MAC address and (if desired IP address)
 		uid_sda_o: out std_logic;
-		uid_scl_i: in std_logic;
-		uid_sda_i: in std_logic;
+		uid_scl_i: in std_logic :='0' ; --* Tie
+		uid_sda_i: in std_logic :='0' ; --* Tie
 		gp_o: out std_logic_vector(11 downto 0); -- General purpose output from soft-core CPU
+        mac_addr: in std_logic_vector(47 downto 0) := (others =>'0'); -- MAC address --* Tie
+        ip_addr: in std_logic_vector(31 downto 0) := (others =>'0'); -- IP address  --* Tie
 		ipb_in: in ipb_rbus; -- ipbus
 		ipb_out: out ipb_wbus
 	);
@@ -80,7 +84,7 @@ architecture rtl of enclustra_ax3_pm3_macprom_infra is
 	signal mac_addr: std_logic_vector(47 downto 0); -- MAC address
 	signal ip_addr:  std_logic_vector(31 downto 0); -- IP address
 	signal internal_nuke, neo430_nuke: std_logic;
-    signal neo430_RARP_select , RARP_select : std_logic; -- set high to use RARP
+    signal neo430_RARP_select , RARP_select : std_logic := '0'; -- set high to use RARP
     
     attribute mark_debug: string;
     attribute mark_debug of RARP_select : signal is "true";
@@ -135,7 +139,7 @@ begin
 -- Soft core to read MAC and IP address
 	soft_core_cpu: entity work.ipbus_neo430_wrapper
 		generic map(
-                  CLOCK_SPEED =>  31250000, -- 31.25MHz IPBus clock
+                  CLOCK_SPEED =>  NEO430_CLOCK_SPEED, -- 31.25MHz IPBus clock
                   UID_I2C_ADDR => UID_I2C_ADDR 
                   )
 		port map(
