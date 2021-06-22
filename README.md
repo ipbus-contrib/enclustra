@@ -21,10 +21,12 @@ If you are going to build on a computer outside of the CERN network, then you wi
 
 These instructions assume that you have your Xilinx Vivado licensing already setup for your environment and have a licence for the Xilinx tri-mode Gigabit Ethernet core.
 
+These instructions have been tested with Vivado 2020.2
+
 	mkdir work
 	cd work
-	curl -L https://github.com/ipbus/ipbb/archive/dev/2021h.tar.gz | tar xvz
-	source ipbb-dev-2021h/env.sh 
+	curl -L https://github.com/ipbus/ipbb/archive/dev/2021i.tar.gz | tar xvz
+	source ipbb-dev-2021i/env.sh 
 	ipbb init build
 	cd build
 
@@ -40,7 +42,7 @@ These instructions assume that you have your Xilinx Vivado licensing already set
 	# You will need msp430-gcc installed for this.
 	pushd src/enclustra/components/neo430_wrapper/software/neo430_ipbus_address_terminal/
 	make clean_all 
-	make install CFLAGS="-DFORCE_RARP=1 -DPROMUIDADDR=0x10" APPLICATION_IMAGE_FNAME=neo430_application_image_crypoEEPROM.vhd
+	make install CFLAGS="-DFORCE_RARP=1 -DPROMUIDADDR=0x10" APPLICATION_IMAGE_FNAME=neo430_application_image_cryptoEEPROM.vhd
 	# The CFLAGS above build for MAC addr. from CryptoEEPROM on AX3. For default build (24AA025) use the following instead: 
 	# make clean_all
 	# make install
