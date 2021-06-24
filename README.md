@@ -30,9 +30,8 @@ These instructions have been tested with Vivado 2020.2
 	ipbb init build
 	cd build
 
-	ipbb add git https://github.com/ipbus/ipbus-firmware.git -b  v1.8
+	ipbb add git https://github.com/ipbus/ipbus-firmware.git -b  v1.9
 	ipbb add git git@github.com:ipbus-contrib/enclustra.git 
-	ipbb add git https://github.com/stnolting/neo430.git -b 0x0408
 	
 	# These next steps compile the software running on the neo430. 
         # Don't need to recompile if using a FMC with E24AA025E4 at I2C address 0x53
