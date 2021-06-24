@@ -42,7 +42,7 @@ APP_INC = -I . -I ../lib/include
 # NEO430 framework
 #-------------------------------------------------------------------------------
 # This is a bit fragile ... point to neo430 checked out from github.
-NEO430_REPO_PATH=../../../../../neo430/sw
+NEO430_REPO_PATH=../../../neo430/sw
 # Path to NEO430 linker script and startup file
 NEO430_COM_PATH=$(NEO430_REPO_PATH)/common
 # Path to main NEO430 library include files
