@@ -55,9 +55,12 @@ These instructions have been tested with Vivado 2020.2
 
 	# This example uses the crypto EEPROM on the Enclustra AX3.
 	# ipbb proj create vivado top_a35-macprom-example-cryptoEEPROM enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_crypoEEPROM.dep
+	#
+	# This example uses a fixed IP ( no NEO430 core)
+	# ipbb proj create vivado top_a35-example enclustra:projects/example top_enclustra_ax3_pm3_a35.dep
 
-	cd proj/top_a35-macprom-example
-	ipbb vivado project
+	cd proj/top_a35-macprom-example-24AA025E
+	ipbb vivado generate-project
 	ipbb vivado impl
 	ipbb vivado bitfile
 	ipbb vivago memcfg
@@ -66,9 +69,9 @@ These instructions have been tested with Vivado 2020.2
 
 ### Which Components Do I Use in My Design ? ###
 
-This repository contains a version of the IPBus infrastructure block that reads MAC and IP address from PROM : [enclustra_ax3_pm3_macprom_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_macprom_infra.vhd) . The ports are described in a [README.md](boards/enclustra_ax3_pm3/synth/firmware/hdl/README.md)
+This repository contains a version of the IPBus infrastructure block that reads MAC and IP address from PROM : [enclustra_ax3_pm3_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_infra.vhd) . The ports are described in a [README.md](boards/enclustra_ax3_pm3/synth/firmware/hdl/README.md)
 
-Inside [enclustra_ax3_pm3_macprom_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_macprom_infra.vhd) there is a wrapper around the NEO430 soft core microprocessor, do
+Inside [enclustra_ax3_pm3_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_infra.vhd) there is a wrapper around the NEO430 soft core microprocessor. To use static IP set generic `USE_NEO430` to `True`
 
 ### Who do I talk to? ###
 

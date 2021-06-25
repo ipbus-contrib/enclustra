@@ -79,7 +79,7 @@ begin
 	uid_scl <= '0'  when ((uid_scl_o= '0') or (neo430_scl_o= '0')) else 'Z';
 
 
-	infra: entity work.enclustra_ax3_pm3_macprom_infra
+	infra: entity work.enclustra_ax3_pm3_infra
 	   generic map(
 	       USE_NEO430 => True, 
 	       UID_I2C_ADDR => x"64", -- location in I2C map of PROM holding MAC addr.
