@@ -98,7 +98,7 @@ int main(void) {
   //  USI_CT = (1<<USI_CT_EN);
  
   neo430_uart_br_print( "\n----------------------------------------\n"
-                          "- IPBus Address Control Terminal v0.17 -\n"
+                          "- IPBus Address Control Terminal v0.18 -\n"
                           "----------------------------------------\n\n");
 
   // check if WB unit was synthesized, exit if no WB is available

@@ -36,15 +36,17 @@ These instructions have been tested with Vivado 2020.2
 	# These next steps compile the software running on the neo430. 
         # Don't need to recompile if using a FMC with E24AA025E4 at I2C address 0x53
 	# (or you have changed the source *.c code.)
-	# To build example that just uses the CryptoEEPROM on AX3 
-	# you will need to rebuild since the I2C address of EEPROM is not the same as on FMC
 	# You will need msp430-gcc installed for this.
 	pushd src/enclustra/components/neo430_wrapper/software/neo430_ipbus_address_terminal/
 	make clean_all 
-	make install CFLAGS="-DFORCE_RARP=1 -DPROMUIDADDR=0x10" APPLICATION_IMAGE_FNAME=neo430_application_image_cryptoEEPROM.vhd
-	# The CFLAGS above build for MAC addr. from CryptoEEPROM on AX3. For default build (24AA025) use the following instead: 
-	# make clean_all
-	# make install
+	make install 
+	#
+	# To build for AT24C256 (or similar) that needs two address bytes written to address a memory location:
+	# and has MAC(UID) stored at addrfess 0x10
+	# make install CFLAGS="-DPROMUIDADDR=0x10 -DPROMNADDRBYTES=2"
+	#
+	# To force RARP:
+	# make install CFLAGS="-DFORCE_RARP=1"
 
 	popd
 
@@ -52,10 +54,7 @@ These instructions have been tested with Vivado 2020.2
 
 	# This example assumes an AX3 with Artix 35 and an E24AA025E4 EEPROM at I2C address 0x53 (e.g. on pc053 FMC)  connected to uid_scl , uid_sda lines 
 	ipbb proj create vivado top_a35-macprom-example-24AA025E enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_24AA025E.dep
-
-	# This example uses the crypto EEPROM on the Enclustra AX3.
-	# ipbb proj create vivado top_a35-macprom-example-cryptoEEPROM enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_crypoEEPROM.dep
-	#
+	
 	# This example uses a fixed IP ( no NEO430 core)
 	# ipbb proj create vivado top_a35-example enclustra:projects/example top_enclustra_ax3_pm3_a35.dep
 
