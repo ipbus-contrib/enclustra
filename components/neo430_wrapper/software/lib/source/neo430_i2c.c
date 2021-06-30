@@ -377,9 +377,10 @@ void print_GPO( uint16_t gpo){
  * -------------------------------------------------*/
 int64_t read_UID(){
 
-  const uint8_t bytesToRead = 6;
+  
   //  int16_t status;
   uint64_t uid = 0;
+  uint8_t b0, b1, b2, b3, b4, b5;
 
   neo430_uart_br_print("MAC location in I2C PROM = ");
   neo430_uart_print_hex_byte( PROMUIDADDR );
@@ -389,9 +390,28 @@ int64_t read_UID(){
   neo430_uart_print_hex_byte( PROMNADDRBYTES );
   neo430_uart_br_print("\n");
 
-  read_i2c_prom( PROMUIDADDR , bytesToRead, buffer );
+// Reading all 6 bytes at once doesn't work with cheapie AT24C256 
+// Nasty work-around
+//const uint8_t bytesToRead = 6;
+//  read_i2c_prom( PROMUIDADDR , bytesToRead, buffer );
 
-  uid = (uint64_t)buffer[5] + ((uint64_t)buffer[4]<<8) + ((uint64_t)buffer[3]<<16) + ((uint64_t)buffer[2]<<24) + ((uint64_t)buffer[1]<<32) + ((uint64_t)buffer[0]<<40);
+  const uint8_t bytesToRead = 1;
+  read_i2c_prom( PROMUIDADDR , bytesToRead, buffer );
+  b0 = buffer[0];
+  read_i2c_prom( PROMUIDADDR+1 , bytesToRead, buffer );
+  b1 = buffer[0];
+  read_i2c_prom( PROMUIDADDR+2 , bytesToRead, buffer );
+  b2 = buffer[0];
+  read_i2c_prom( PROMUIDADDR+3 , bytesToRead, buffer );
+  b3 = buffer[0];
+  read_i2c_prom( PROMUIDADDR+4 , bytesToRead, buffer );
+  b4 = buffer[0];
+  read_i2c_prom( PROMUIDADDR+5 , bytesToRead, buffer );
+  b5 = buffer[0];
+
+  // Use this when able to read out 6 bytes at a time
+  //uid = (uint64_t)buffer[5] + ((uint64_t)buffer[4]<<8) + ((uint64_t)buffer[3]<<16) + ((uint64_t)buffer[2]<<24) + ((uint64_t)buffer[1]<<32) + ((uint64_t)buffer[0]<<40);
+  uid = (uint64_t)b5 + ((uint64_t)b4<<8) + ((uint64_t)b3<<16) + ((uint64_t)b2<<24) + ((uint64_t)b1<<32) + ((uint64_t)b0<<40);
 
   return uid; // Returns bottom 48-bit UID in a 64-bit word
 
