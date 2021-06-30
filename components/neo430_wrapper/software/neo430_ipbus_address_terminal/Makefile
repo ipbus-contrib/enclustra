@@ -78,7 +78,7 @@ APP_SRC += $(wildcard $(NEO430_SRC_PATH)/*.c)
 APP_BIN = main.bin
 APP_ASM = main.s
 
-APPLICATION_IMAGE_FNAME = neo430_application_image_24AA025E.vhd
+APPLICATION_IMAGE_FNAME = neo430_application_image_macprom.vhd
 
 compile: $(APP_ASM) $(APP_BIN)
 install: $(APP_ASM) $(APPLICATION_IMAGE_FNAME)
@@ -164,7 +164,7 @@ $(APPLICATION_IMAGE_FNAME): image.dat $(IMAGE_GEN)
 	@$(IMAGE_GEN) -app_img $< $@
 	@echo Installing application image to $(NEO430_RTL_PATH)/$(APPLICATION_IMAGE_FNAME)
 	cp $(APPLICATION_IMAGE_FNAME) $(NEO430_RTL_PATH)/.
-	# @rm -f $(APPLICATION_IMAGE_FNAME)
+	@rm -f $(APPLICATION_IMAGE_FNAME)
 
 
 #-------------------------------------------------------------------------------
