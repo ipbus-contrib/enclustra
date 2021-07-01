@@ -53,12 +53,12 @@ These instructions have been tested with Vivado 2020.2
 	# Create IPBB project....
 
 	# This example assumes an AX3 with Artix 35 and an E24AA025E4 EEPROM at I2C address 0x53 (e.g. on pc053 FMC)  connected to uid_scl , uid_sda lines 
-	ipbb proj create vivado top_a35-macprom-example-24AA025E enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_24AA025E.dep
+	ipbb proj create vivado top_a35-macprom-example enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom.dep
 	
 	# This example uses a fixed IP ( no NEO430 core)
 	# ipbb proj create vivado top_a35-example enclustra:projects/example top_enclustra_ax3_pm3_a35.dep
 
-	cd proj/top_a35-macprom-example-24AA025E
+	cd proj/top_a35-macprom-example-macprom
 	ipbb vivado generate-project
 	ipbb vivado impl
 	ipbb vivado bitfile
