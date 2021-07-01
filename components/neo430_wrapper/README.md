@@ -48,18 +48,14 @@ If the software running on the soft core needs to be modified then
 * change directory to `components/neo430_wrapper/software`
 * execute the following commands: 
 ```
-make clean
+make clean_all
 make compile
 make install
 ```
 
 ### Including neo430_wrapper in ipbb firmware build
 
-add neo430 source code from gitlab:
-
-```
-ipbb add git https://github.com/stnolting/neo430.git -b 0x0408
-```
+The code for the `neo430` soft core is added as a sub-module. It should be automatically downloaded when the `neo430_wrapper` code is added to the project.
 
 ### Interface to soft core CPU
 
@@ -75,7 +71,7 @@ Commands available:
  read     - read IP addr from PROM
  writegpo - write GPO value to PROM
  readgpo  - read GPO value from PROM
- set      - read from E24AA025E48T UID and PROM area. Set MAC and IP address
+ set      - read from PROM. Set MAC and IP address
  reset    - reset CPU
 ```
 

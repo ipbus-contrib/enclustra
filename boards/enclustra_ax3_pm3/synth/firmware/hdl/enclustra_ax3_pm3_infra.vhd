@@ -37,7 +37,11 @@ use work.ipbus.all;
 
 entity enclustra_ax3_pm3_infra is
 	generic (
-		CLK_AUX_FREQ: real := 40.0 -- Default: 40 MHz clock - LHC
+          CLK_AUX_FREQ : real := 40.0 ; -- Default: 40 MHz clock - LHC
+          USE_NEO430 : boolean := False; -- Set to "true" in order to include NEO430
+          NEO430_CLOCK_SPEED : natural := 31250000 ; -- soft core clock speed
+          FORCE_RARP : boolean := False; -- Set True in order to force use of RARP, regardless of PROM
+          UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
 		);
 	port(
 		osc_clk: in std_logic; -- 50MHz board crystal clock
@@ -56,8 +60,15 @@ entity enclustra_ax3_pm3_infra is
 		rgmii_rxd: in std_logic_vector(3 downto 0);
 		rgmii_rx_ctl: in std_logic;
 		rgmii_rxc: in std_logic;
-		mac_addr: in std_logic_vector(47 downto 0); -- MAC address
-		ip_addr: in std_logic_vector(31 downto 0); -- IP address
+		uart_txd_o : out std_logic; -- UART connection between soft core and serial terminal
+		uart_rxd_i : in std_logic :='0' ; --* Tie
+		uid_scl_o: out std_logic; -- I2C bus connected to EEPROM storing MAC address and (if desired IP address)
+		uid_sda_o: out std_logic;
+		uid_scl_i: in std_logic :='0' ; --* Tie
+		uid_sda_i: in std_logic :='0' ; --* Tie
+		gp_o: out std_logic_vector(11 downto 0); -- General purpose output from soft-core CPU
+        mac_addr: in std_logic_vector(47 downto 0) := (others =>'0'); -- MAC address --* Tie
+        ip_addr: in std_logic_vector(31 downto 0) := (others =>'0'); -- IP address  --* Tie
 		ipb_in: in ipb_rbus; -- ipbus
 		ipb_out: out ipb_wbus
 	);
@@ -66,11 +77,45 @@ end enclustra_ax3_pm3_infra;
 
 architecture rtl of enclustra_ax3_pm3_infra is
 
+    -- Can't use direct instantiation ( entity work.ipbus_neo430_wrapper ) since if USE_NEO430 is False, then don't want to have to include ipbus_neo430_wrapper.vhd
+    COMPONENT ipbus_neo430_wrapper IS
+    GENERIC( 
+        CLOCK_SPEED : natural := 31250000;
+        UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
+        );
+    PORT( 
+        clk_i      : IN     std_logic;                      -- global clock, rising edge
+        rst_i      : IN     std_logic;                      -- global reset, async, active high
+        uart_txd_o : OUT    std_logic;                      -- UART from NEO to host
+        uart_rxd_i : IN     std_logic;                      -- from host to NEO UART
+        leds       : OUT    std_logic_vector (3 DOWNTO 0);  -- status LEDs
+        scl_o      : OUT    std_logic;                      -- I2C clock from NEO
+        scl_i      : IN     std_logic;                      -- the actual state of the line back to NEO
+        sda_o      : OUT    std_logic;                      -- I2C data from NEO
+        sda_i      : IN     std_logic;
+        gp_o       : OUT    std_logic_vector(11 downto 0);  -- General purpose output. Used in DUNE to define the endpoint ID
+        use_rarp_o : OUT    std_logic;                      -- If high then IPBus should use RARP, not fixed IP
+        ip_addr_o  : OUT    std_logic_vector(31 downto 0);  -- IP address to give to IPBus core
+        mac_addr_o : OUT    std_logic_vector(47 downto 0);  -- MAC address to give to IPBus core
+        ipbus_rst_o: OUT    std_logic                       -- Reset line to IPBus core
+        );
+    end component;
+
 	signal clk125_fr, clk125, clk125_90, clk200, clk_aux, clk_ipb, clk_ipb_i, locked, rst125, rst_aux, rst_ipb, rst_ipb_ctrl, rst_eth, onehz, pkt: std_logic;
 	signal mac_tx_data, mac_rx_data: std_logic_vector(7 downto 0);
 	signal mac_tx_valid, mac_tx_last, mac_tx_error, mac_tx_ready, mac_rx_valid, mac_rx_last, mac_rx_error: std_logic;
 	signal led_p: std_logic_vector(0 downto 0);
-	
+	signal s_mac_addr, s_neo430_mac_addr: std_logic_vector(47 downto 0); -- MAC address
+	signal s_ip_addr , s_neo430_ip_addr:  std_logic_vector(31 downto 0); -- IP address
+	signal internal_nuke, neo430_nuke: std_logic := '0';
+    signal neo430_RARP_select , RARP_select : std_logic := '0'; -- set high to use RARP
+    
+--    attribute mark_debug: string;
+--    attribute mark_debug of RARP_select : signal is "true";
+--    attribute mark_debug of neo430_RARP_select : signal is "true";
+--    attribute mark_debug of rst_ipb_ctrl : signal is "true";
+--    attribute mark_debug of internal_nuke : signal is "true";
+
 begin
 
 --	DCM clock generation for internal bus, ethernet
@@ -87,7 +132,7 @@ begin
 			clko_aux => clk_aux,
 			clko_ipb => clk_ipb_i,
 			locked => locked,
-			nuke => nuke,
+			nuke => internal_nuke,
 			soft_rst => soft_rst,
 			rsto_125 => rst125,
 			rsto_aux => rst_aux,
@@ -115,7 +160,35 @@ begin
 		);
 
 	leds <= (led_p(0), locked and onehz);
-	
+
+-- Soft core to read MAC and IP address
+    gen_softcore: if USE_NEO430 generate
+	soft_core_cpu: ipbus_neo430_wrapper
+		generic map(
+                  CLOCK_SPEED =>  NEO430_CLOCK_SPEED, -- 31.25MHz IPBus clock
+                  UID_I2C_ADDR => UID_I2C_ADDR 
+                  )
+		port map(
+			clk_i => clk_ipb,	-- global clock, rising edge
+			rst_i => '0',		-- CPU reset. Active high. Async
+			uart_txd_o => uart_txd_o,-- UART from NEO to host
+      		uart_rxd_i => uart_rxd_i,-- from host to NEO UART
+      		leds       => open, -- status LEDs
+	    	scl_o      => uid_scl_o,                      -- I2C clock from NEO
+	    	scl_i      => uid_scl_i,                       -- the actual state of the line back to NEO
+    		sda_o      => uid_sda_o,                        -- I2C data from NEO
+    		sda_i      => uid_sda_i,
+    		use_rarp_o => neo430_RARP_select,
+    		gp_o       => gp_o,
+    		ip_addr_o  => s_neo430_ip_addr,
+    		mac_addr_o => s_neo430_mac_addr,
+    		ipbus_rst_o => neo430_nuke
+			);
+    end generate gen_softcore;
+    
+	-- combine resets
+	internal_nuke <= nuke or neo430_nuke;
+
 -- Ethernet MAC core and PHY interface
 	
 	eth: entity work.eth_7s_rgmii
@@ -160,9 +233,17 @@ begin
 			mac_tx_ready => mac_tx_ready,
 			ipb_out => ipb_out,
 			ipb_in => ipb_in,
-			mac_addr => mac_addr,
-			ip_addr => ip_addr,
+			RARP_select => RARP_select,
+			mac_addr => s_mac_addr,
+			ip_addr => s_ip_addr,
 			pkt => pkt
 		);
 
+    -- If we are using the NEO430 soft core, get the MAC,IP addresses from there
+    -- Otherwise use the input ports.
+    s_mac_addr <= s_neo430_mac_addr when USE_NEO430 else mac_addr;
+    s_ip_addr  <= s_neo430_ip_addr  when USE_NEO430 else ip_addr;
+    
+    RARP_select <= '1' when (neo430_RARP_select='1' or FORCE_RARP) else '0';
+    
 end rtl;

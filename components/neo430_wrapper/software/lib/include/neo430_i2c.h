@@ -21,15 +21,23 @@ uint32_t hex_str_to_uint32(char *buffer);
 uint16_t hex_str_to_uint16(char *buffer);
 void delay(uint32_t n );
 bool enable_i2c_bridge();
-int64_t read_E24AA025E48T();
+bool wake_ax3_ATSHA204A (); 
+int64_t read_UID();
+int64_t read_UID();
 uint16_t zero_buffer( uint8_t buffer[] , uint16_t elements);
+
 int16_t write_Prom();
 uint32_t read_Prom();
+
 int16_t write_PromGPO();
 uint16_t read_PromGPO();
+void dump_Prom();
 
 int16_t  read_i2c_prom( uint8_t startAddress , uint8_t wordsToRead , uint8_t buffer[] );
 int16_t write_i2c_prom( uint8_t startAddress , uint8_t wordsToWrite, uint8_t buffer[] );
+
+
+
 void uint8_to_decimal_str( uint8_t value , uint8_t *buffer) ;
 void print_IP_address( uint32_t ipAddr);
 void print_MAC_address( uint64_t macAddr);
@@ -76,17 +84,10 @@ void print_GPO( uint16_t gpo);
 //#define ADDR_DATA 0x3
 //#define ADDR_CMD_STAT 0x4
 
-// I2C address of Crypto EEPROM on AX3
-#define MYSLAVE 0x64
-
-// Pass to neo430 over GPIO.
-// I2C address of UiD EEPROM on TLU
-// #define EEPROMADDRESS  0x50
-
-// I2C address of UiD EEPROM on timing FMC pc053
-// #define EEPROMADDRESS  0x53
-
-
+// Address on I2C bus of EEPROM is passed over GPIO into the NEO
+// TLU = 0x50 (E24AA025E)
+// pc053 = 0x53 (E24AA025E)
+// Crypto EEPROM on AX3 = 0x64 (Not yet implemented)
 
 // PROM memory address start...
 #define PROMMEMORYADDR 0x00
@@ -100,6 +101,12 @@ void print_GPO( uint16_t gpo);
 #ifndef PROMUIDADDR
 #define PROMUIDADDR 0xFA
 //#define PROMUIDADDR 0x10
+#endif
+
+// Number of address bytes needed to address PROM
+//  E24AA025E needs one address byte sent AT24C256 needs two
+#ifndef PROMNADDRBYTES
+#define PROMNADDRBYTES 0x1
 #endif
 
 

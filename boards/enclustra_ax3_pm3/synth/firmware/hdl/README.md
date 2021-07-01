@@ -3,8 +3,10 @@
 `enclustra_ax3_pm3_macprom_infra ` performs the same IPBus decoding functions as `enclustra_ax3_pm3_infra` , but reads the MAC address from a  E24AA025E or compatible EEPROM attached to I2C bus.
 
 ```
-entity enclustra_ax3_pm3_macprom_infra is
+entity enclustra_ax3_pm3_infra is
         generic (
+	  USE_NEO430  : boolean := False; -- Set to True to use NEO430 to set MAC/IP from PROM
+ 	  FORCE_RARP : boolean := False; -- Set true to force IPBus core to use RARP to set IP
           CLK_AUX_FREQ : real := 40.0 ; -- Default: 40 MHz clock - LHC
           UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
                 );
@@ -32,6 +34,8 @@ entity enclustra_ax3_pm3_macprom_infra is
                 uid_scl_i: in std_logic;
                 uid_sda_i: in std_logic;
                 gp_o: out std_logic_vector(11 downto 0); -- General purpose output from soft-core CPU
+		mac_addr: in std_logic_vector(47 downto 0) := (others =>'0'); -- MAC address if using fixed IP. Don't connect when using NEO430
+                ip_addr: in std_logic_vector(31 downto 0) := (others =>'0'); -- IP address if using fixed IP. Don't connect when using NEO430
                 ipb_in: in ipb_rbus; -- ipbus
                 ipb_out: out ipb_wbus
         );

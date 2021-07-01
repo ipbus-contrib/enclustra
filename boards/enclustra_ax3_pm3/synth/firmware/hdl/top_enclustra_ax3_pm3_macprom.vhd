@@ -79,10 +79,12 @@ begin
 	uid_scl <= '0'  when ((uid_scl_o= '0') or (neo430_scl_o= '0')) else 'Z';
 
 
-	infra: entity work.enclustra_ax3_pm3_macprom_infra
-	   generic map( UID_I2C_ADDR => x"53" ,-- location in I2C map of PROM holding MAC addr.
-	                                      -- 0x64 is the EEPROM on the pc053 FMC
-	                FORCE_RARP => False                      
+	infra: entity work.enclustra_ax3_pm3_infra
+	   generic map(
+	       USE_NEO430 => True, 
+	       UID_I2C_ADDR => x"53" ,-- location in I2C map of PROM holding MAC addr.
+	                                      -- 0x53 is the EEPROM on the pc053 FMC
+	       FORCE_RARP => False                      
 	   )
 		port map(
 			osc_clk => osc_clk,

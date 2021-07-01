@@ -21,29 +21,32 @@ If you are going to build on a computer outside of the CERN network, then you wi
 
 These instructions assume that you have your Xilinx Vivado licensing already setup for your environment and have a licence for the Xilinx tri-mode Gigabit Ethernet core.
 
+These instructions have been tested with Vivado 2020.2
+
 	mkdir work
 	cd work
-	curl -L https://github.com/ipbus/ipbb/archive/dev/2021h.tar.gz | tar xvz
-	source ipbb-dev-2021h/env.sh 
+	curl -L https://github.com/ipbus/ipbb/archive/dev/2021i.tar.gz | tar xvz
+	source ipbb-dev-2021i/env.sh 
 	ipbb init build
 	cd build
 
-	ipbb add git https://github.com/ipbus/ipbus-firmware.git -b  v1.8
+	ipbb add git https://github.com/ipbus/ipbus-firmware.git -b  v1.9
 	ipbb add git git@github.com:ipbus-contrib/enclustra.git 
-	ipbb add git https://github.com/stnolting/neo430.git -b 0x0408
 	
 	# These next steps compile the software running on the neo430. 
         # Don't need to recompile if using a FMC with E24AA025E4 at I2C address 0x53
 	# (or you have changed the source *.c code.)
-	# To build example that just uses the CryptoEEPROM on AX3 
-	# you will need to rebuild since the I2C address of EEPROM is not the same as on FMC
 	# You will need msp430-gcc installed for this.
 	pushd src/enclustra/components/neo430_wrapper/software/neo430_ipbus_address_terminal/
 	make clean_all 
-	make install CFLAGS="-DFORCE_RARP=1 -DPROMUIDADDR=0x10" APPLICATION_IMAGE_FNAME=neo430_application_image_crypoEEPROM.vhd
-	# The CFLAGS above build for MAC addr. from CryptoEEPROM on AX3. For default build (24AA025) use the following instead: 
-	# make clean_all
-	# make install
+	make install 
+	#
+	# To build for AT24C256 (or similar) that needs two address bytes written to address a memory location:
+	# and has MAC(UID) stored at addrfess 0x10
+	# make install CFLAGS="-DPROMUIDADDR=0x10 -DPROMNADDRBYTES=2"
+	#
+	# To force RARP:
+	# make install CFLAGS="-DFORCE_RARP=1"
 
 	popd
 
@@ -51,12 +54,12 @@ These instructions assume that you have your Xilinx Vivado licensing already set
 
 	# This example assumes an AX3 with Artix 35 and an E24AA025E4 EEPROM at I2C address 0x53 (e.g. on pc053 FMC)  connected to uid_scl , uid_sda lines 
 	ipbb proj create vivado top_a35-macprom-example-24AA025E enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_24AA025E.dep
+	
+	# This example uses a fixed IP ( no NEO430 core)
+	# ipbb proj create vivado top_a35-example enclustra:projects/example top_enclustra_ax3_pm3_a35.dep
 
-	# This example uses the crypto EEPROM on the Enclustra AX3.
-	# ipbb proj create vivado top_a35-macprom-example-cryptoEEPROM enclustra:projects/example top_enclustra_ax3_pm3_a35_macprom_crypoEEPROM.dep
-
-	cd proj/top_a35-macprom-example
-	ipbb vivado project
+	cd proj/top_a35-macprom-example-24AA025E
+	ipbb vivado generate-project
 	ipbb vivado impl
 	ipbb vivado bitfile
 	ipbb vivago memcfg
@@ -65,9 +68,9 @@ These instructions assume that you have your Xilinx Vivado licensing already set
 
 ### Which Components Do I Use in My Design ? ###
 
-This repository contains a version of the IPBus infrastructure block that reads MAC and IP address from PROM : [enclustra_ax3_pm3_macprom_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_macprom_infra.vhd) . The ports are described in a [README.md](boards/enclustra_ax3_pm3/synth/firmware/hdl/README.md)
+This repository contains a version of the IPBus infrastructure block that reads MAC and IP address from PROM : [enclustra_ax3_pm3_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_infra.vhd) . The ports are described in a [README.md](boards/enclustra_ax3_pm3/synth/firmware/hdl/README.md)
 
-Inside [enclustra_ax3_pm3_macprom_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_macprom_infra.vhd) there is a wrapper around the NEO430 soft core microprocessor, do
+Inside [enclustra_ax3_pm3_infra.vhd](boards/enclustra_ax3_pm3/synth/firmware/hdl/enclustra_ax3_pm3_infra.vhd) there is a wrapper around the NEO430 soft core microprocessor. To use static IP set generic `USE_NEO430` to `True`
 
 ### Who do I talk to? ###
 
