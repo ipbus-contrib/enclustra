@@ -5,10 +5,3 @@ init:
 # reset is not yet supported
 reset:
   - git submodule deinit -f .
-
-# dependent repos, not yet implemented
-repos:
-  - name: ipbus
-    type: git
-    path: https://github.com/ipbus/ipbus-firmware.git
-    branch: v1.9
