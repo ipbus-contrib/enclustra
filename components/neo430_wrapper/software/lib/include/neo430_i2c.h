@@ -21,6 +21,8 @@ uint32_t hex_str_to_uint32(char *buffer);
 uint16_t hex_str_to_uint16(char *buffer);
 void delay(uint32_t n );
 bool enable_i2c_bridge();
+bool enable_i2c_mux(uint8_t port);
+bool write_xbar();
 bool wake_ax3_ATSHA204A (); 
 int64_t read_UID();
 int64_t read_UID();

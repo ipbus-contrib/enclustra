@@ -10,7 +10,7 @@
 #include <../include/neo430_i2c.h>
 
 #ifndef DEBUG
-#define DEBUG 0
+#define DEBUG 500
 #endif
 
 uint8_t eepromAddress;
@@ -18,7 +18,7 @@ uint8_t eepromAddress;
 bool checkack(uint32_t delayVal) {
 
 #if DEBUG > 1
-neo430_uart_br_print("\nChecking ACK\n");
+neo430_uart_br_print("\ncheckack: Checking ACK\n");
 #endif
 
   bool inprogress = true;
@@ -27,10 +27,17 @@ neo430_uart_br_print("\nChecking ACK\n");
   while (inprogress) {
     delay(delayVal);
     cmd_stat = neo430_wishbone32_read8(ADDR_CMD_STAT);
+
+#if DEBUG > 0
+    neo430_uart_br_print("\ncheckack: Read status. Command status = \n");
+    neo430_uart_print_hex_byte( (uint8_t)cmd_stat );
+#endif
+
     inprogress = (cmd_stat & INPROGRESS) > 0;
     ack = (cmd_stat & RECVDACK) == 0;
 
 #if DEBUG > 0
+    neo430_uart_br_print("\ncheckack: Finished checking ACK\n");
     neo430_uart_print_hex_byte( (uint8_t)ack );
 #endif
 
@@ -45,6 +52,7 @@ void delay(uint32_t delayVal){
   for (uint32_t i=0;i<delayVal;i++){
     asm volatile ("MOV r3,r3");
   }
+
 }
 
 
@@ -173,15 +181,24 @@ int16_t write_i2c_address(uint8_t addr , uint8_t nToWrite , uint8_t data[], bool
   addr = addr << 1;
 
 #if DEBUG > 2
-  neo430_uart_br_print("\nWriting to I2C.\n");
+  neo430_uart_br_print("\nwrite_i2c_address: Writing to I2C.\n");
 #endif
 
   // Set transmit register (write operation, LSB=0)
   neo430_wishbone32_write8(ADDR_DATA , addr );
+#if DEBUG > 2
+  neo430_uart_br_print("\nwrite_i2c_address: Wrote to ADDR_DATA OK.\n");
+#endif
+
   //  Set Command Register to 0x90 (write, start)
   neo430_wishbone32_write8(ADDR_CMD_STAT, STARTCMD | WRITECMD );
+#if DEBUG > 2
+  neo430_uart_br_print("\nwrite_i2c_address:Wrote to ADDR_CMD_STAT, STARTCMD | WRITECMD, OK \n");
+#endif
 
   ack = checkack(DELAYVAL);
+
+
 
   if (! ack){
     neo430_uart_br_print("\nwrite_i2c_address: No ACK in response to device-ID. Send STOP and terminate\n");
@@ -198,6 +215,11 @@ int16_t write_i2c_address(uint8_t addr , uint8_t nToWrite , uint8_t data[], bool
       //Set Command Register to 0x10 (write)
       neo430_wishbone32_write8(ADDR_CMD_STAT, WRITECMD);
       ack = checkack(DELAYVAL);
+#if DEBUG > 2
+      neo430_uart_br_print("\nwrite_i2c_address: Wrote byte: \n");
+      neo430_uart_print_hex_byte( val );
+      neo430_uart_br_print("\n");
+#endif
       if (!ack){
           neo430_wishbone32_write8(ADDR_CMD_STAT, STOPCMD);
           return nwritten;
@@ -287,6 +309,81 @@ bool enable_i2c_bridge() {
  
 }
 
+/* ------------------------------------------------------------
+ * INFO Enable I2C Mux on AFC v4
+ * TCA9548 
+ * Enable one port only.
+ * ------------------------------------------------------------ */
+bool enable_i2c_mux(uint8_t port) {
+
+  bool mystop;
+  uint8_t I2CMUX = 0x70;
+  // uint8_t wordsForAddress = 1;
+  uint8_t bytesToWrite = 1;
+
+  neo430_uart_br_print("\nEnabling a port on I2C mux:\n");
+  buffer[0] = 1 << ( port & 0x07 ) ;
+  mystop = true;
+  
+#if DEBUG > 2
+   neo430_uart_br_print("\nWriting to I2CMUX. Stop = true. Byte to write = :\n");
+   neo430_uart_print_hex_dword(buffer[0]);
+#endif
+  write_i2c_address(I2CMUX , bytesToWrite , buffer, mystop );
+
+
+#if DEBUG > 2
+   neo430_uart_br_print("\nReading word from I2CMUX:\n");
+   uint8_t bytesToRead = 1;
+  read_i2c_address(I2CMUX, bytesToRead , buffer);
+
+  neo430_uart_br_print("Post RegDir: ");
+  neo430_uart_print_hex_dword(buffer[0]);
+  neo430_uart_br_print("\n");
+#endif 
+
+  return true; // TODO: return a status, rather than True all the time...
+ 
+}
+
+/* ------------------------------------------------------------
+ * INFO Configure clock cross-bar on AFC v4
+ * 8V54816
+  * ------------------------------------------------------------ */
+bool write_xbar() {
+
+  bool mystop;
+  uint8_t I2CCLOCKXBAR = 0x5B;
+  uint8_t bytesToWrite = 16;
+  
+  buffer[0] = 0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[1] = 0b01100000 ; // port 1 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[2] = 0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[3] = 0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[4] = 0b01100000 ; // port 4 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[5] = 0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[6] = 0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[7] = 0b11000101 ; // port 7 = output , no internal termination , not inverted , filler, from port 5 
+  buffer[8] = 0b01100000 ; // port 8 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[9] = 0b01100000 ; // port 9 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[11] = 0b01100000 ; // port 11 = input , internal termination , not inverted , filler, 4xfiller
+  buffer[12] = 0b11000101 ; // port 12 = output , no internal termination , not inverted , filler, from port 5
+  buffer[13] = 0b11000101 ; // port 13 = output , no internal termination , not inverted , filler, from port 5
+  buffer[14] = 0b11000101 ; // port 14 = output , no internal termination , not inverted , filler, from port 5
+  buffer[15] = 0b11000101 ; // port 15 = output , no internal termination , not inverted , filler, from port 5
+  
+  mystop = true;
+#if DEBUG > 2
+  neo430_uart_br_print("\nwrite_xbar: Writing to XBAR. Stop = true. First Byte to write = :\n");
+  neo430_uart_print_hex_dword(buffer[0]);
+#endif
+  
+  write_i2c_address(I2CCLOCKXBAR , bytesToWrite , buffer, mystop );
+     
+  return true; // TODO: return a status, rather than True all the time...
+    
+}
 
 /* ---------------------------*
  *  Read bytes from PROM      *
