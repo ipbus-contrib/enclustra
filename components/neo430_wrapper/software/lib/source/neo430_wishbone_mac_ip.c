@@ -26,7 +26,7 @@
 #include "neo430_wishbone.h"
 #include "neo430_wishbone_mac_ip.h"
 
-// #define DEBUG 1
+#define DEBUG 1
 
 /* ------------------------------------------------------------
  * INFO Read the 32-bit IP address

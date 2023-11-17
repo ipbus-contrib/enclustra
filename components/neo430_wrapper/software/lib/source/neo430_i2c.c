@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "../include/neo430.h"
 #include <../include/neo430_i2c.h>
+#include <neo430_gpio.h>
 
 #ifndef DEBUG
 #define DEBUG 500
@@ -181,7 +182,8 @@ int16_t write_i2c_address(uint8_t addr , uint8_t nToWrite , uint8_t data[], bool
   addr = addr << 1;
 
 #if DEBUG > 2
-  neo430_uart_br_print("\nwrite_i2c_address: Writing to I2C.\n");
+  neo430_uart_br_print("\nwrite_i2c_address: About to write address to I2C device address = .\n");
+  neo430_uart_print_hex_byte( addr );
 #endif
 
   // Set transmit register (write operation, LSB=0)
@@ -310,19 +312,40 @@ bool enable_i2c_bridge() {
 }
 
 /* ------------------------------------------------------------
- * INFO Enable I2C Mux on AFC v4
- * TCA9548 
- * Enable one port only.
+ * INFO Set I2C mux inside FPGA between soft-core (false) and IPBus (true)
+ * Assumes that Mux bit is connected to PIO bit zero
  * ------------------------------------------------------------ */
-bool enable_i2c_mux(uint8_t port) {
+bool set_internal_i2c_mux(bool controller){
+
+  if (controller) {
+    // set IPBus control
+      neo430_gpio_pin_set(0);
+      neo430_uart_br_print("\nIPBus i2c ctrl\n");
+    } else {
+    // set NEO430 control of I2C bus
+      neo430_gpio_pin_clr(0);
+      neo430_uart_br_print("\nNEO i2c ctrl\n");
+  }
+
+  return true; // TODO: return a status, rather than True all the time...
+}
+
+/* ------------------------------------------------------------
+ * INFO Enable port(s) on I2C Mux on AFC v4
+ * TCA9548 
+ * ------------------------------------------------------------ */
+bool enable_i2c_mux(uint8_t mask) {
 
   bool mystop;
   uint8_t I2CMUX = 0x70;
-  // uint8_t wordsForAddress = 1;
   uint8_t bytesToWrite = 1;
-
+  bool status = true;
+  
+    // Grab control of I2C bus
+  // status = set_internal_i2c_mux( false);
+  
   neo430_uart_br_print("\nEnabling a port on I2C mux:\n");
-  buffer[0] = 1 << ( port & 0x07 ) ;
+  buffer[0] = mask ; 
   mystop = true;
   
 #if DEBUG > 2
@@ -342,36 +365,49 @@ bool enable_i2c_mux(uint8_t port) {
   neo430_uart_br_print("\n");
 #endif 
 
-  return true; // TODO: return a status, rather than True all the time...
+  return status; // TODO: return a status, rather than True all the time...
  
 }
 
 /* ------------------------------------------------------------
  * INFO Configure clock cross-bar on AFC v4
  * 8V54816
+ * 
+ * Port is which port to output to U/FL connectors (port 7)
   * ------------------------------------------------------------ */
-bool write_xbar() {
+bool write_xbar(uint8_t port) {
 
   bool mystop;
   uint8_t I2CCLOCKXBAR = 0x5B;
   uint8_t bytesToWrite = 16;
+  bool status = true;
+
+  // Grab control of I2C bus
+  // status = set_internal_i2c_mux( false);
   
-  buffer[0] = 0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[1] = 0b01100000 ; // port 1 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[2] = 0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[3] = 0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[4] = 0b01100000 ; // port 4 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[5] = 0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[6] = 0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[7] = 0b11000101 ; // port 7 = output , no internal termination , not inverted , filler, from port 5 
-  buffer[8] = 0b01100000 ; // port 8 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[9] = 0b01100000 ; // port 9 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[11] = 0b01100000 ; // port 11 = input , internal termination , not inverted , filler, 4xfiller
-  buffer[12] = 0b11000101 ; // port 12 = output , no internal termination , not inverted , filler, from port 5
-  buffer[13] = 0b11000101 ; // port 13 = output , no internal termination , not inverted , filler, from port 5
-  buffer[14] = 0b11000101 ; // port 14 = output , no internal termination , not inverted , filler, from port 5
-  buffer[15] = 0b11000101 ; // port 15 = output , no internal termination , not inverted , filler, from port 5
+  // Connect I2C to clock Mux 
+  //status =   enable_i2c_mux(0x10);
+    
+  buffer[0] =  0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller. Unused
+  buffer[1] =  0b01100000 ; // port 1 = input , internal termination , not inverted , filler, 4xfiller. Unused
+  buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. ( PLL output )
+  buffer[3] =  0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller. ( FMC1_CLK0_M2C not used) 
+  buffer[4] =  0b10101010 ; // port 4 = output , no internal termination , not inverted , filler.       From port 10. PLL input , FMC1_CLK2_BIDIR. Connected to 250MHz from backplane
+  buffer[5] =  0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller. ( 125MHz free running oscillator for Ethernet refclk )
+  buffer[6] =  0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller. Unused
+
+  port =port & 0b00001111 ; // mask out top 5 bits, just leaving bits to select which port connected to port 7. Connected to U/FL sockets.
+  buffer[7] =  0b11100000 | port ; // port 7 = output , internal termination , not inverted , filler, from port "port"
+
+  buffer[8] =  0b11100010 ; // port 8 = output , internal termination , not inverted , filler, from port 2.  ( TCLKD = FPGA_CLK3 = AA30/AB30 on FPGA = clk_pll input to FPGA, connected to PLL output , port 2 )
+  buffer[9] =  0b11101011 ; // port 9 = output , internal termination , not inverted , filler, from port 11. ( TCLKC = FPGA_CLK2 = Y30/Y31 on FPGA = data from MIB)
+
+  buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller.         (250MHz from MIB on TCLKA)
+  buffer[11] = 0b01100000 ; // port 11 = input , internal termination , not inverted , filler, 4xfiller.         (DCSK from MIB on TCLKB )
+  buffer[12] = 0b10100101 ; // port 12 = output , no internal termination , not inverted , filler, from port 5.  (One option for Ethernet refclk)
+  buffer[13] = 0b10100101 ; // port 13 = output , no internal termination , not inverted , filler, from port 5.  (One option for Ethernet refclk)
+  buffer[14] = 0b10100101 ; // port 14 = output , no internal termination , not inverted , filler, from port 5.  Unused
+  buffer[15] = 0b10100101 ; // port 15 = output , no internal termination , not inverted , filler, from port 5.  (One option for Ethernet refclk)
   
   mystop = true;
 #if DEBUG > 2
@@ -381,7 +417,7 @@ bool write_xbar() {
   
   write_i2c_address(I2CCLOCKXBAR , bytesToWrite , buffer, mystop );
      
-  return true; // TODO: return a status, rather than True all the time...
+  return status; // TODO: return a status, rather than True all the time...
     
 }
 
@@ -478,7 +514,11 @@ int64_t read_UID(){
   //  int16_t status;
   uint64_t uid = 0;
   uint8_t b0, b1, b2, b3, b4, b5;
+  //bool status;
 
+  // Enable I2C bus on FMC #1 
+  //status =   enable_i2c_mux(0x80);
+    
   neo430_uart_br_print("MAC location in I2C PROM = ");
   neo430_uart_print_hex_byte( PROMUIDADDR );
   neo430_uart_br_print("\n");
@@ -521,9 +561,13 @@ int64_t read_UID(){
 uint32_t read_Prom() {
 
   const uint8_t bytesToRead = 4;
-  //  int16_t status;
-  uint32_t uid ;
 
+  uint32_t uid ;
+  //bool status;
+  
+  // connect I2C to FMC
+  //status =   enable_i2c_mux(0x80);
+    
   //status =  read_i2c_prom( startAddress , bytesToRead, buffer );
   read_i2c_prom( PROMMEMORYADDR , bytesToRead, buffer );
 
@@ -637,7 +681,7 @@ void dump_Prom(){
  * ------------------------------------------------------------ */
 uint32_t hex_str_to_uint32(char *buffer) {
 
-  uint16_t length = strlen(buffer);
+  uint8_t length = strlen(buffer);
   uint32_t res = 0, d = 0;
   char c = 0;
 
@@ -667,7 +711,7 @@ uint32_t hex_str_to_uint32(char *buffer) {
  * ------------------------------------------------------------ */
 uint16_t hex_str_to_uint16(char *buffer) {
 
-  uint16_t length = strlen(buffer);
+  uint8_t length = strlen(buffer);
   uint16_t res = 0, d = 0;
   char c = 0;
 
@@ -680,6 +724,36 @@ uint16_t hex_str_to_uint16(char *buffer) {
       d = (uint16_t)((c - 'a') + 10);
     else if ((c >= 'A') && (c <= 'F'))
       d = (uint16_t)((c - 'A') + 10);
+    else
+      d = 0;
+
+    res = res + (d << (length*4));
+  }
+
+  return res;
+}
+
+/* ------------------------------------------------------------
+ * INFO Hex-char-string conversion function
+ * PARAM String with hex-chars (zero-terminated)
+ * not case-sensitive, non-hex chars are treated as '0'
+ * RETURN Conversion result (8-bit)
+ * ------------------------------------------------------------ */
+uint8_t hex_str_to_uint8(char *buffer) {
+
+  uint8_t length = strlen(buffer);
+  uint8_t res = 0, d = 0;
+  char c = 0;
+
+  while (length--) {
+    c = *buffer++;
+
+    if ((c >= '0') && (c <= '9'))
+      d = (uint8_t)(c - '0');
+    else if ((c >= 'a') && (c <= 'f'))
+      d = (uint8_t)((c - 'a') + 10);
+    else if ((c >= 'A') && (c <= 'F'))
+      d = (uint8_t)((c - 'A') + 10);
     else
       d = 0;
 

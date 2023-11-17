@@ -51,11 +51,16 @@ bool useRARP;
  * ------------------------------------------------------------ */
 int setMacIP(void){
 
-  // first enable I2C brige
-#ifdef OLD_ENCLUSTRA_PM3
-  //enable_i2c_bridge();
-#endif
+  bool status;
+  
+    // Grab control of I2C bus
+  status = set_internal_i2c_mux( false);
 
+  enable_i2c_mux( 0x90 ); // TCA9548 I2C Mux. port 4 is the clock x-bar, port 7 is FMC #1 , port 6 is FMC #2. SO should need to write 0x90. ( 0xD0 activates both FMC 1 and 2)
+	
+  // first connect up reference clock and connect monitor output to port 10 (clk from MIB)
+  write_xbar(10);
+  
   // set IPBus reset
   neo430_wishbone_writeIPBusReset(true);
 
@@ -65,20 +70,28 @@ int setMacIP(void){
   // and write to control lines
   neo430_wishbone_writeMACAddr(uid);
 
-#if FORCE_RARP == 0
+#if (FORCE_RARP == 0) && (FORCE_IPADDR ==0)
   // then read IP address
   ipAddr = read_Prom();
   // and write to control lines
   neo430_wishbone_writeIPAddr(ipAddr);
 #endif
 
+#if FORCE_IPADDR !=0
+  neo430_wishbone_writeIPAddr(FORCE_IPADDR);
+#endif
+
+
   // if the IP address is set to 255.255.255.255 or 0.0.0.0 then use RARP
-  useRARP = ((ipAddr == 0xFFFFFFFF) || (ipAddr == 0) || FORCE_RARP==1 ) ? true : false;
+  useRARP = (((ipAddr == 0xFFFFFFFF) || (ipAddr == 0) || FORCE_RARP==1 ) && FORCE_IPADDR == 0) ? true : false;
   neo430_wishbone_writeRarpFlag(useRARP);
 
   //  // then read the value to write to general purpose output (used for endpoint addr in DUNE)
   //gpo = read_PromGPO();
   //neo430_gpio_port_set(gpo);
+
+  // Release I2C bus
+  status = set_internal_i2c_mux( true);
 
   // then release IPBus reset line
   neo430_wishbone_writeIPBusReset(false);
@@ -86,6 +99,19 @@ int setMacIP(void){
   return 0;
 }
 
+void set_i2c_ctrl(){ // set whether NEO430 or IPBus is controlling I2C bus from FPGA
+
+  neo430_uart_br_print("0 for NEO, 1 IPBus ");
+  neo430_uart_scan(command, 2,1); // 1 character reply  '\0'
+
+  if (!strcmp(command, "0")) {
+      set_internal_i2c_mux(false);
+	} else {
+      set_internal_i2c_mux(true);
+    }
+    
+
+}
 
 /* ------------------------------------------------------------
  * INFO Main function
@@ -99,9 +125,9 @@ int main(void) {
   neo430_uart_setup(BAUD_RATE);
   //  USI_CT = (1<<USI_CT_EN);
  
-  neo430_uart_br_print( "\n----------------------------------------\n"
-                          "- IPBus Address Control Terminal v0.26 -\n"
-                          "----------------------------------------\n\n");
+  neo430_uart_br_print( // "\n-------------------------------------\n"
+                          "- AFC Control Terminal v0.30 -\n"
+                          "------------------------------\n\n");
 
   // check if WB unit was synthesized, exit if no WB is available
   if (!(SYS_FEATURES & (1<<SYS_WB32_EN))) {
@@ -117,8 +143,7 @@ int main(void) {
   setup_i2c();
 
   // read EEPROM and write to IPBus IP and MAC addresses
-  // comment out for now
-  //setMacIP();
+  setMacIP();
     
   for (;;) {
 
@@ -153,32 +178,35 @@ int main(void) {
       selection = 7;    
     if (!strcmp(command, "set"))
       selection = 8;
-    if (!strcmp(command, "reset"))
+    if (!strcmp(command, "i2cmux"))
       selection = 9;
+    if (!strcmp(command, "reset"))
+      selection = 10;
 
         // execute command
     switch(selection) {
 
       case 1: // print help menu
-        neo430_uart_br_print("Available commands:\n"
-                      " help     - show this text\n"
-                      " enable   - enable I2C Mux on AFC v4\n"
-                      " id       - Read Unique ID\n"
+        neo430_uart_br_print("Commands:\n"
+                      "help  - show this text\n"
+                      "enable - enable AFC I2C Mux\n"
+                      "id    - Read UID\n"
 #if FORCE_RARP == 0
-                      " write    - write IP addr to PROM\n"
-                      " read     - read IP addr from PROM\n"
+                      "write - write IP addr to PROM\n"
+                      "read  - read IP addr from PROM\n"
 #endif
-		     " xbar      - set up clock xbar\n"
-		     //" readgpo  - read GPO value from PROM\n"
-		      " dump     - dump EEPROM contents\n"
-                      " set      - read from PROM. Set MAC and IP address\n"
-                      " reset    - reset CPU\n"
+		      "xbar  - setup clock xbar\n"
+		     //"readgpo  - read GPO value from PROM\n"
+		     // "dump  - dump EEPROM\n" // comment out to save memory			     
+                      "set   - Set MAC+IP addr from PROM\n"
+		      "i2cmux\n"
+                      "reset  - reset CPU\n"
                       );
         break;
 
       case 2: // Enable I2C Mux
 	     
-	enable_i2c_mux( 4 ); // port 4 is the clock x-bar
+	enable_i2c_mux( 0xF0 ); // TCA9548 I2C Mux. port 4 is the clock x-bar, port 7 is FMC #1 , port 6 is FMC #2. SO should need to write 0x90. ( 0xD0 activates both FMC 1 and 2) 
         break;
 
       case 3: // read from Unique ID address
@@ -198,21 +226,26 @@ int main(void) {
 #endif
 
       case 6: // configure clock cross-bar on AFC
-             write_xbar();
-             break;
+	
+	neo430_uart_br_print("Enter x-bar mon port (hex)\n");
+	neo430_uart_scan(command, 2,1); // 2 hex chars for address plus '\0'
+	uint8_t data = hex_str_to_uint8(command);
+	write_xbar(data);
+	break;
 	     
-	//       case 7: // read GPO value from PROM
-        //gpo = read_PromGPO();
-        //print_GPO(gpo);
-
+      case 7:  // dump entire contents of PROM
+	// dump_Prom(); // ditch to save space
+	break;
+	
       case 8: // set MAC , IP address , RARP flag
         setMacIP();
         break;
-      case 7:  // dump entire contents of PROM
-	dump_Prom();
+
+      case 9:  // select between NEO and IPBus for I2C control
+	set_i2c_ctrl();
 	break;
 	
-      case 9: // restart
+      case 10: // restart
 	while ((UART_CT & (1<<UART_CT_TX_BUSY)) != 0); // wait for current UART transmission
         neo430_soft_reset();
         break;

@@ -8,6 +8,8 @@ USE neo430.neo430_package.all;
 ENTITY ipbus_neo430_wrapper IS
   GENERIC( 
     CLOCK_SPEED : natural := 31250000;
+    IMEM_SIZE    : natural := 6*1024; -- internal IMEM size in bytes, max 48kB (default=4kB)
+    DMEM_SIZE    : natural := 2*1024; -- internal DMEM size in bytes, max 12kB (default=2kB)
     UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
     );
   PORT( 
@@ -49,8 +51,10 @@ architecture rtl of ipbus_neo430_wrapper is
   signal s_i2c_addr : std_logic_vector(2 downto 0); -- need 3 bits for I2C master.
   signal s_ipmac_ni2c_flag : std_logic; -- high if addressing MAC/IP output. Low for I2C
   
-  --attribute mark_debug : string; 
-  --attribute mark_debug of  wb_adr_o_int , wb_dat_i_int , wb_dat_o_int , wb_stb_o_int , wb_ack_i_int , s_i2c_ack , s_mac_addr_ack , s_i2c_addr , s_ipmac_ni2c_flag : signal is "true";
+  signal s_twi_sda_io, s_twi_scl_io : std_logic; -- bidirectional lines to I2C interface in NEO430
+  
+  attribute mark_debug : string; 
+  attribute mark_debug of  wb_adr_o_int , wb_dat_i_int , wb_dat_o_int , wb_stb_o_int , wb_ack_i_int , s_i2c_ack , s_mac_addr_ack , s_i2c_addr , s_ipmac_ni2c_flag : signal is "true";
 
 begin  -- architecture rtl
 
@@ -60,29 +64,27 @@ begin  -- architecture rtl
     generic map (
       -- general configuration --
       CLOCK_SPEED => CLOCK_SPEED,       -- main clock in Hz
-      IMEM_SIZE   => 6*1024,  -- internal IMEM size in bytes, max 32kB (default=4kB)
-      DMEM_SIZE   => 2*1024,  -- internal DMEM size in bytes, max 28kB (default=2kB)
+      IMEM_SIZE   => IMEM_SIZE,  -- internal IMEM size in bytes, max 32kB (default=4kB)
+      DMEM_SIZE   => DMEM_SIZE,  -- internal DMEM size in bytes, max 28kB (default=2kB)
       -- additional configuration --
       USER_CODE   => x"BEAD",           -- custom user code
       -- module configuration --
-      -- DADD_USE    => false,  -- implement DADD instruction? (default=true)
-      MULDIV_USE  => false,  -- implement multiplier/divider unit? (default=true)
+      MULDIV_USE  => false,              -- implement multiplier/divider unit? (default=true). 
       WB32_USE    => true,              -- implement WB32 unit? (default=true)
       WDT_USE     => false,             -- implement WDT? (default=true)
       GPIO_USE    => true,              -- implement GPIO unit? (default=true)
       TIMER_USE   => false,             -- implement timer? (default=true)
       UART_USE    => true,              -- implement USART? (default=true)
-      TWI_USE     => false,  -- implement two wire serial interface? (default=true)
+      TWI_USE     => false,             -- Was false -- implement two wire serial interface? (default=true)
       CRC_USE     => false,             -- implement CRC unit? (default=true)
-      PWM_USE     => false,  -- implement PWM controller? (default=true)
-      EXIRQ_USE   => false,              -- implement EXIRQ? (default=true)
-      SPI_USE     => false, -- implement SPI? (default=true)
+      PWM_USE     => false,             -- implement PWM controller? (default=true)
+      EXIRQ_USE   => false,             -- implement EXIRQ? (default=true)
+      SPI_USE     => false,             -- implement SPI? (default=true)
       FREQ_GEN_USE => false,
       -- boot configuration --
-      -- BOOTLD_USE  => true,              -- implement and use bootloader? (default=true)
-      -- IMEM_AS_ROM => false              -- implement IMEM as read-only memory? (default=false)
-      BOOTLD_USE  => false,  -- implement and use bootloader? (default=true)
-      IMEM_AS_ROM => true  -- implement IMEM as read-only memory? (default=false)
+      -- BOOTLD_USE  => true,              -- implement and use bootloader? (default=true). Set to false for final program
+      IMEM_AS_ROM => false              -- implement IMEM as read-only memory? (default=false). Set TRUE for final program
+      --IMEM_AS_ROM => true  -- implement IMEM as read-only memory? (default=false)
       )
     port map (
       -- global control --
@@ -112,17 +114,19 @@ begin  -- architecture rtl
       wb_cyc_o   => wb_cyc_o_int,               -- valid cycle
       wb_ack_i   => wb_ack_i_int,                -- transfer acknowledge
 
-      -- I2C lines. Not used
-      --twi_sda_o => open,             -- twi serial data line
-      --twi_scl_o => open,              -- twi serial clock line
-      --twi_sda_i => '1',             -- twi serial data line
-      --twi_scl_i => '1',              -- twi serial clock line
+      -- I2C lines. Used for debugging with TWI_TERMINAL
+--      twi_sda_io  => s_twi_sda_io, -- twi serial data line
+--      twi_scl_io  => s_twi_scl_io, -- twi serial clock line
+--      older NEO430 versions have separate in/out sda/scl lines.
+--      twi_sda_o => open,             -- twi serial data line
+--      twi_scl_o => open,              -- twi serial clock line
+--      twi_sda_i => '1',             -- twi serial data line
+--      twi_scl_i => '1',              -- twi serial clock line
 
       -- -- external interrupt --
       ext_irq_i     => ( others => '0'),                 -- external interrupt request line
       ext_ack_o => open  -- external interrupt request acknowledge
       );
-
 
   leds <= s_pio(15 downto 12);
   gp_o <= s_pio(11 downto 0);
@@ -141,10 +145,15 @@ begin  -- architecture rtl
     wb_stb_i => wb_stb_o_int and (not s_ipmac_ni2c_flag) and not s_i2c_ack,
     wb_cyc_i => '1',
     wb_ack_o => s_i2c_ack,
+-- comment out if using NEO TWI interface instead    
     scl_pad_i => scl_i,
     scl_padoen_o => scl_o,
     sda_pad_i => sda_i,
     sda_padoen_o => sda_o
+--    scl_pad_i => '1',
+--    scl_padoen_o => open,
+--    sda_pad_i => '1',
+--    sda_padoen_o => open
     );
 
   -- Multiplex Wishbone busses based on wb_addr(4). 0=I2C, 1=MAC/IP

@@ -79,7 +79,7 @@ APP_SRC += $(wildcard $(NEO430_SRC_PATH)/*.c)
 APP_BIN = main.bin
 APP_ASM = main.s
 
-APPLICATION_IMAGE_FNAME = neo430_application_image_macprom.vhd
+APPLICATION_IMAGE_FNAME = neo430_application_image_afc-v4.vhd
 
 compile: $(APP_ASM) $(APP_BIN)
 install: $(APP_ASM) $(APPLICATION_IMAGE_FNAME)
