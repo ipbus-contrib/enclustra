@@ -7,9 +7,10 @@ USE neo430.neo430_package.all;
 
 ENTITY ipbus_neo430_wrapper IS
   GENERIC( 
-    CLOCK_SPEED : natural := 31250000;
+    CLOCK_SPEED  : natural := 31250000;
     IMEM_SIZE    : natural := 6*1024; -- internal IMEM size in bytes, max 48kB (default=4kB)
     DMEM_SIZE    : natural := 2*1024; -- internal DMEM size in bytes, max 12kB (default=2kB)
+    BOOTLD_USE   : boolean := false; -- include bootloader in soft-core code.
     UID_I2C_ADDR : std_logic_vector(7 downto 0) := x"53" -- Address on I2C bus of E24AA025E
     );
   PORT( 
@@ -82,8 +83,8 @@ begin  -- architecture rtl
       SPI_USE     => false,             -- implement SPI? (default=true)
       FREQ_GEN_USE => false,
       -- boot configuration --
-      -- BOOTLD_USE  => true,              -- implement and use bootloader? (default=true). Set to false for final program
-      IMEM_AS_ROM => false              -- implement IMEM as read-only memory? (default=false). Set TRUE for final program
+      BOOTLD_USE  => BOOTLD_USE,        -- implement and use bootloader? (default=true). Set to false for final program
+      IMEM_AS_ROM => not BOOTLD_USE     -- implement IMEM as read-only memory? (default=false). Set TRUE for final program
       --IMEM_AS_ROM => true  -- implement IMEM as read-only memory? (default=false)
       )
     port map (
