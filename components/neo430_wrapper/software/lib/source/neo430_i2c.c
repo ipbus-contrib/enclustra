@@ -392,7 +392,7 @@ bool write_xbar(uint8_t port) {
   buffer[1] =  0b01100000 ; // port 1 = input , internal termination , not inverted , filler, 4xfiller. Unused
   buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. ( PLL output )
   buffer[3] =  0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller. ( FMC1_CLK0_M2C not used) 
-  buffer[4] =  0b10101011 ; // port 4 = output , no internal termination , not inverted , filler.       From port 10. PLL input , FMC1_CLK2_BIDIR. Connected to 250MHz from backplane
+  buffer[4] =  0b10101011 ; // port 4 = output , no internal termination , not inverted , filler.       From port 11. PLL input , FMC1_CLK2_BIDIR. Connected to DCSK from MIB on TCLKB from backplane
   buffer[5] =  0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller. ( 125MHz free running oscillator for Ethernet refclk )
   buffer[6] =  0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller. Unused
 
