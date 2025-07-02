@@ -388,22 +388,22 @@ bool write_xbar(uint8_t port) {
   // Connect I2C to clock Mux 
   //status =   enable_i2c_mux(0x10);
     
-  buffer[0] =  0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller. Unused
-  buffer[1] =  0b01100000 ; // port 1 = input , internal termination , not inverted , filler, 4xfiller. Unused
-  buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. ( PLL output )
+  buffer[0] =  0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller. (FCLK - MIB clock) in (DUNE-variant mod)
+  buffer[1] =  0b11100000 ; // port 1 = output ,internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FPGA clock input via FCLK_FPGA (DUNE-variant mod)
+  buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. Unused
   buffer[3] =  0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller. ( FMC1_CLK0_M2C not used) 
-  buffer[4] =  0b10101011 ; // port 4 = output , no internal termination , not inverted , filler.       From port 11. PLL input , FMC1_CLK2_BIDIR. Connected to DCSK from MIB on TCLKB from backplane
+  buffer[4] =  0b10100000 ; // port 4 = output , no internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
   buffer[5] =  0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller. ( 125MHz free running oscillator for Ethernet refclk )
   buffer[6] =  0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller. Unused
 
   port =port & 0b00001111 ; // mask out top 5 bits, just leaving bits to select which port connected to port 7. Connected to U/FL sockets.
   buffer[7] =  0b11100000 | port ; // port 7 = output , internal termination , not inverted , filler, from port "port"
 
-  buffer[8] =  0b11100010 ; // port 8 = output , internal termination , not inverted , filler, from port 2.  ( TCLKD = FPGA_CLK3 = AA30/AB30 on FPGA = clk_pll input to FPGA, connected to PLL output , port 2 )
-  buffer[9] =  0b11101011 ; // port 9 = output , internal termination , not inverted , filler, from port 11. ( TCLKC = FPGA_CLK2 = Y30/Y31 on FPGA = data from MIB)
+  buffer[8] =  0b01100000 ; // port 8 = input , internal termination , not inverted , filler, (data from MIB AA30/AB30 on FPGA)
+  buffer[9] =  0b11101010 ; // port 9 = output , internal termination , not inverted , filler, from port 10. ( TCLKC = FPGA_CLK2 = Y30/Y31 on FPGA = data from MIB)
 
-  buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller.         (250MHz from MIB on TCLKA)
-  buffer[11] = 0b01100000 ; // port 11 = input , internal termination , not inverted , filler, 4xfiller.         (DCSK from MIB on TCLKB )
+  buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller.         (data from MIB on TCLKA)
+  buffer[11] = 0b11101000 ; // port 11 = output , internal termination , not inverted , filler, from port 8.     (DCSK from MIB on TCLKB )
   buffer[12] = 0b10100101 ; // port 12 = output , no internal termination , not inverted , filler, from port 5.  (One option for Ethernet refclk)
   buffer[13] = 0b10100101 ; // port 13 = output , no internal termination , not inverted , filler, from port 5.  (One option for Ethernet refclk)
   buffer[14] = 0b10100101 ; // port 14 = output , no internal termination , not inverted , filler, from port 5.  Unused
