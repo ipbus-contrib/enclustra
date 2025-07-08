@@ -399,8 +399,8 @@ bool write_xbar(uint8_t port) {
   port =port & 0b00001111 ; // mask out top 5 bits, just leaving bits to select which port connected to port 7. Connected to U/FL sockets.
   buffer[7] =  0b11100000 | port ; // port 7 = output , internal termination , not inverted , filler, from port "port"
 
-  buffer[8] =  0b01100000 ; // port 8 = input , internal termination , not inverted , filler, (data from MIB AA30/AB30 on FPGA)
-  buffer[9] =  0b11101010 ; // port 9 = output , internal termination , not inverted , filler, from port 10. ( TCLKC = FPGA_CLK2 = Y30/Y31 on FPGA = data from MIB)
+  buffer[8] =  0b01100000 ; // port 8 = input , internal termination , not inverted , filler, (data from AFC AA30/AB30 on FPGA)
+  buffer[9] =  0b11101010 ; // port 9 = output , internal termination , not inverted , filler, from port 10. (FPGA_CLK2 = Y30/Y31 on FPGA = data from MIB)
 
   buffer[10] = 0b01100000 ; // port 10 = input , internal termination , not inverted , filler, 4xfiller.         (data from MIB on TCLKA)
   buffer[11] = 0b11101000 ; // port 11 = output , internal termination , not inverted , filler, from port 8.     (DCSK from MIB on TCLKB )
