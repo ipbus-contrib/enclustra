@@ -389,10 +389,10 @@ bool write_xbar(uint8_t port) {
   //status =   enable_i2c_mux(0x10);
     
   buffer[0] =  0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller. (FCLK - MIB clock) in (DUNE-variant mod)
-  buffer[1] =  0b11100000 ; // port 1 = output ,internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FPGA clock input via FCLK_FPGA (DUNE-variant mod)
+  buffer[1] =  0b01100000 ; // port 1 = input , internal termination , not inverted , filler, From FPGA (ep clk4x) to input 1 via FCLK_FPGA (DUNE-variant mod)
   buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. clock from FIB clock buffer (not used)
   buffer[3] =  0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller. ( FMC1_CLK0_M2C not used) 
-  buffer[4] =  0b10100000 ; // port 4 = output , no internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
+  buffer[4] =  0b10100001 ; // port 4 = output , no internal termination , not inverted , filler, From port 1 (ep clk4x clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
   buffer[5] =  0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller. ( 125MHz free running oscillator for Ethernet refclk )
   buffer[6] =  0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller. Unused
 
