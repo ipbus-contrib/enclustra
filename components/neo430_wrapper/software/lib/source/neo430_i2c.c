@@ -11,7 +11,7 @@
 #include <neo430_gpio.h>
 
 #ifndef DEBUG
-#define DEBUG 500
+#define DEBUG 0
 #endif
 
 uint8_t eepromAddress;
@@ -375,24 +375,38 @@ bool enable_i2c_mux(uint8_t mask) {
  * 
  * Port is which port to output to U/FL connectors (port 7)
   * ------------------------------------------------------------ */
-bool write_xbar(uint8_t port) {
+bool write_xbar(uint8_t port, bool fib_clk_from_fpga) {
 
   bool mystop;
   uint8_t I2CCLOCKXBAR = 0x5B;
   uint8_t bytesToWrite = 16;
   bool status = true;
 
+  uint8_t port1_config, port4_config;
   // Grab control of I2C bus
   // status = set_internal_i2c_mux( false);
   
   // Connect I2C to clock Mux 
   //status =   enable_i2c_mux(0x10);
-    
+
+  if (fib_clk_from_fpga)
+  {
+    port1_config = 0b01100000 ; // port 1 = input , internal termination , not inverted , filler, From FPGA (ep clk4x) to input 1 via FCLK_FPGA (DUNE-variant mod)
+    port4_config = 0b10100001 ; // port 4 = output , no internal termination , not inverted , filler, From port 1 (ep clk4x clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
+    neo430_uart_br_print("\nFIB clock is FPGA output\n");
+  }
+  else
+  {
+    port1_config = 0b11100000 ; // port 1 = output ,internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FPGA clock input via FCLK_FPGA (DUNE-variant mod)
+    port4_config = 0b10100000 ; // port 4 = output , no internal termination , not inverted , filler, From port 0 (FCLK - MIB clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
+    neo430_uart_br_print("\nFIB clock is FPGA input\n");
+  }
+
   buffer[0] =  0b01100000 ; // port 0 = input , internal termination , not inverted , filler, 4xfiller. (FCLK - MIB clock) in (DUNE-variant mod)
-  buffer[1] =  0b01100000 ; // port 1 = input , internal termination , not inverted , filler, From FPGA (ep clk4x) to input 1 via FCLK_FPGA (DUNE-variant mod)
+  buffer[1] =  port1_config;
   buffer[2] =  0b01100000 ; // port 2 = input , internal termination , not inverted , filler, 4xfiller. clock from FIB clock buffer (not used)
   buffer[3] =  0b01100000 ; // port 3 = input , internal termination , not inverted , filler, 4xfiller. ( FMC1_CLK0_M2C not used) 
-  buffer[4] =  0b10100001 ; // port 4 = output , no internal termination , not inverted , filler, From port 1 (ep clk4x clock) to FIB clock buffer input via FMC1_CLK2_BIDIR.
+  buffer[4] =  port4_config;
   buffer[5] =  0b01100000 ; // port 5 = input , internal termination , not inverted , filler, 4xfiller. ( 125MHz free running oscillator for Ethernet refclk )
   buffer[6] =  0b01100000 ; // port 6 = input , internal termination , not inverted , filler, 4xfiller. Unused
 
