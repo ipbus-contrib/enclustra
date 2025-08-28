@@ -24,6 +24,7 @@ ENTITY ipbus_neo430_wrapper IS
     sda_o      : OUT    std_logic;                      -- I2C data from NEO
     sda_i      : IN     std_logic;
     gp_o       : OUT    std_logic_vector(11 downto 0);  -- General purpose output. Used in DUNE to define the endpoint ID
+    gp_i       : IN     std_logic_vector(7 downto 0);   -- General purpose input
     use_rarp_o : OUT    std_logic;                      -- If high then IPBus should use RARP, not fixed IP
     ip_addr_o  : OUT    std_logic_vector(31 downto 0);  -- IP address to give to IPBus core
     mac_addr_o : OUT    std_logic_vector(47 downto 0);  -- MAC address to give to IPBus core
@@ -53,7 +54,7 @@ architecture rtl of ipbus_neo430_wrapper is
   signal s_ipmac_ni2c_flag : std_logic; -- high if addressing MAC/IP output. Low for I2C
   
   signal s_twi_sda_io, s_twi_scl_io : std_logic; -- bidirectional lines to I2C interface in NEO430
-  
+
   attribute mark_debug : string; 
   attribute mark_debug of  wb_adr_o_int , wb_dat_i_int , wb_dat_o_int , wb_stb_o_int , wb_ack_i_int , s_i2c_ack , s_mac_addr_ack , s_i2c_addr , s_ipmac_ni2c_flag : signal is "true";
 
@@ -93,7 +94,7 @@ begin  -- architecture rtl
       rst_i      => not rst_i,          -- global reset, async, high active
       -- gpio --
       gpio_o     => s_pio,        -- status LEDs, general purpose output
-      gpio_i     => x"00" & UID_I2C_ADDR, -- address on I2C bus of PROM
+      gpio_i     => gp_i & UID_I2C_ADDR, -- address on I2C bus of PROM
       
       -- serial com --
       uart_txd_o => uart_txd_o,         -- UART send data

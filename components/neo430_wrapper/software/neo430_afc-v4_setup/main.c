@@ -57,10 +57,12 @@ int setMacIP(void){
   status = set_internal_i2c_mux( false);
 
   enable_i2c_mux( 0x90 ); // TCA9548 I2C Mux. port 4 is the clock x-bar, port 7 is FMC #1 , port 6 is FMC #2. SO should need to write 0x90. ( 0xD0 activates both FMC 1 and 2)
-	
+
+  bool fib_clk_from_fpga =  (neo430_gpio_port_get() & 0x0100) >> 8;
+
   // first connect up reference clock and connect monitor output to port 10 (clk from MIB)
-  write_xbar(10);
-  
+  write_xbar(10, fib_clk_from_fpga);
+
   // set IPBus reset
   neo430_wishbone_writeIPBusReset(true);
 
@@ -230,9 +232,10 @@ int main(void) {
 	neo430_uart_br_print("Enter x-bar mon port (hex)\n");
 	neo430_uart_scan(command, 2,1); // 2 hex chars for address plus '\0'
 	uint8_t data = hex_str_to_uint8(command);
-	write_xbar(data);
+	bool fib_clk_from_fpga =  (neo430_gpio_port_get() & 0x0100) >> 8;
+  write_xbar(data, fib_clk_from_fpga);
 	break;
-	     
+
       case 7:  // dump entire contents of PROM
 	// dump_Prom(); // ditch to save space
 	break;

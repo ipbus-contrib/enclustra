@@ -23,7 +23,7 @@ uint8_t hex_str_to_uint8(char *buffer);
 void delay(uint32_t n );
 bool enable_i2c_bridge();
 bool enable_i2c_mux(uint8_t mask);
-bool write_xbar(uint8_t port);
+bool write_xbar(uint8_t port, bool fib_clk_from_fpga);
 bool set_internal_i2c_mux(bool controller);
 bool wake_ax3_ATSHA204A (); 
 int64_t read_UID();
