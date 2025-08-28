@@ -10,6 +10,16 @@
 #define FORCE_RARP 0
 #endif
 
+// Hardwire IP address to 192.168.121.64
+// #ifndef FORCE_IPADDR
+// #define FORCE_IPADDR 0xC0A87940
+// #endif
+
+// Read IP address from PROM
+#ifndef FORCE_IPADDR
+#define FORCE_IPADDR 0
+#endif
+
 #ifndef neo430_wishbone_mac_ip_h
 #define neo430_wishbone_mac_ip_h
 
