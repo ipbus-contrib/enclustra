@@ -26,7 +26,8 @@
 
 # Bitstream config options
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
+set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [current_design]
+set_property BITSTREAM.CONFIG.CONFIGRATE 33 [current_design]
 
 # System clock (200MHz)
 create_clock -period 20.000 -name osc_clk [get_ports osc_clk]
